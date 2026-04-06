@@ -1,0 +1,22 @@
+{
+    "name": "tslan",
+    "version": "1.0.0",
+    "description": "",
+    "license": "ISC",
+    "author": "",
+    "type": "commonjs",
+    "main": "index.ts",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "dev": "node ./dist/main.js",
+        "test": "jest"
+    },
+    "dependencies": {
+        "typescript": "^6.0.2"
+    },
+    "devDependencies": {
+        "@types/jest": "^30.0.0",
+        "test": "^3.3.0",
+        "ts-jest": "^29.4.9"
+    }
+}
