@@ -4,9 +4,11 @@
     "esModuleInterop": true,
     "target": "es6",
     "moduleResolution": "nodenext",
-    "sourceMap": true ,
+    "sourceMap": true,
+    "rootDir":"./src",
     "outDir": "dist",
     "types":["node","jest"],
+    "isolatedModules":true,
   },
   "lib": ["es2015"]
 }

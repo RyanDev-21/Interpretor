@@ -1,5 +1,15 @@
-import { TokenItem, TokenType, Token } from "../token/token";
+import { TokenItem, TokenType, Token, readIDENT, identNumber } from "../token/token";
 
+
+
+const a = 'a'.charCodeAt(0)
+const A = 'A'.charCodeAt(0)
+const z = 'z'.charCodeAt(0)
+const Z = 'Z'.charCodeAt(0)
+const _ = '_'.charCodeAt(0)
+const _0 = '0'.charCodeAt(0)
+const _9 = '9'.charCodeAt(0)
+const dot = '.'.charCodeAt(0)
 export class Lexer {
     private input: string
     private pos: number
@@ -29,9 +39,15 @@ export class Lexer {
 
     public nextToken(): Token {
         var tok: Token
+
+        this.skipWhiteSpace();
         switch (this.char) {
             case '=':
-                tok = this.newToken(TokenType.ASSIGN, this.char)
+                if (this.peekChar() == "=") {
+                    tok = this.newToken(TokenType.EQUAL, this.input[this.pos] + this.input[this.readPos])
+                } else {
+                    tok = this.newToken(TokenType.ASSIGN, this.char)
+                }
                 break
             case ';':
                 tok = this.newToken(TokenType.SEMICOLON, this.char)
@@ -54,10 +70,52 @@ export class Lexer {
             case '}':
                 tok = this.newToken(TokenType.RBRACE, this.char)
                 break
+            case '*':
+                tok = this.newToken(TokenType.ASTERISK, this.char)
+                break
+            case '-':
+                tok = this.newToken(TokenType.MINUS, this.char)
+                break
+            case '<':
+                if (this.peekChar() == "=") {
+                    tok = this.newToken(TokenType.LTEQUAL, this.input[this.pos] + this.input[this.readPos])
+                } else {
+                    tok = this.newToken(TokenType.LT, this.char)
+                }
+                break
+            case '>':
+                if (this.peekChar() == "=") {
+                    tok = this.newToken(TokenType.GTEQUAL, this.input[this.pos] + this.input[this.readPos])
+
+                } else {
+                    tok = this.newToken(TokenType.GT, this.char)
+                }
+                break
+            case '!':
+                if (this.peekChar() == "=") {
+                    tok = this.newToken(TokenType.NEQUAL, this.input[this.pos] + this.input[this.readPos])
+                } else {
+                    tok = this.newToken(TokenType.BANG, this.char)
+                }
+                break
+            case '/':
+                tok = this.newToken(TokenType.SLASH, this.char)
+                break
             case '\0':
                 tok = this.newToken(TokenType.EOF, "")
                 break
             default:
+                if (this.isLetter(this.char.charCodeAt(0))) {
+                    const literal = this.readIdentifier()
+                    const type = readIDENT(literal)
+                    tok = this.newToken(type, literal)
+                    return tok
+                } else if (this.isDigit(this.char.charCodeAt(0))) {
+                    const literal = this.readNumber()
+                    const type = identNumber(literal)
+                    tok = this.newToken(type, literal)
+                    return tok
+                }
                 tok = this.newToken(TokenType.ILLEGAL, "")
                 break
         }
@@ -71,6 +129,46 @@ export class Lexer {
             type: TokenType,
             literal: char
         } as Token
+    }
+    private readIdentifier(): string {
+        let position = this.pos;
+        while (this.isLetter(this.char.charCodeAt(0))) {
+            this.readChar()
+        }
+
+        return this.input.slice(position, this.pos)
+    }
+
+    private readNumber(): string {
+        let position = this.pos;
+        while (this.isDigit(this.char.charCodeAt(0))) {
+            this.readChar()
+        }
+
+        return this.input.slice(position, this.pos)
+    }
+
+
+    private peekChar(): string {
+        if (this.readPos >= this.input.length) {
+            return '\0';
+        }
+        return this.input[this.readPos]
+    }
+
+
+    private isLetter(char: number): boolean {
+        return char >= A && char <= Z || char >= a && char <= z || char === _
+    }
+
+    private skipWhiteSpace() {
+        while (this.char == ' ' || this.char == '\t' || this.char == '\n' || this.char == '\r') {
+            this.readChar()
+        }
+    }
+
+    private isDigit(char: number): boolean {
+        return char >= _0 && char <= _9 || char === dot
     }
 
 }
