@@ -14,9 +14,9 @@ const (
 	LOWEST
 	EQUALS
 	LESSGREATER
+	SUM
 	PRODUCT
 	PREFIX
-	SUM
 	CALL
 )
 
@@ -50,6 +50,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFn = make(map[token.TokenType]infixParseFn)
 	p.registerPrefixParseFn(token.IDENT, p.parseIdentifier)
 	p.registerPrefixParseFn(token.INT, p.parseIntLiteral)
+	p.registerPrefixParseFn(token.TRUE, p.parseBoolLiteral)
+	p.registerPrefixParseFn(token.FALSE, p.parseBoolLiteral)
 	p.registerPrefixParseFn(token.BANG, p.parsePrefixExpression)
 	p.registerPrefixParseFn(token.PLUS, p.parsePrefixExpression)
 	p.registerPrefixParseFn(token.MINUS, p.parsePrefixExpression)
@@ -140,6 +142,14 @@ func (p *Parser) parseIntLiteral() ast.Expression {
 	}
 
 	expression.Value = value
+	return expression
+}
+
+func (p *Parser) parseBoolLiteral() ast.Expression {
+	expression := &ast.Boolean{
+		Token: p.curToken,
+		Value: p.curTokenIs(token.TRUE),
+	}
 	return expression
 }
 

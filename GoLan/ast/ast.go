@@ -55,7 +55,7 @@ func (l *LetStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(l.TokenLiteral() + " ")
 	out.WriteString(l.Name.String())
-	out.WriteString("=")
+	out.WriteString(" = ")
 	if l.Value != nil {
 		out.WriteString(l.Value.String())
 	}
@@ -148,8 +148,19 @@ func (ife *InfixExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString("(")
 	out.WriteString(ife.Left.String())
-	out.WriteString(ife.Operator)
+	out.WriteString(" " + ife.Operator + " ")
 	out.WriteString(ife.Right.String())
 	out.WriteString(")")
 	return out.String()
+}
+
+type Boolean struct {
+	Token token.Token
+	Value bool
+}
+
+func (b *Boolean) expressionNode()      {}
+func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
+func (b *Boolean) String() string {
+	return b.Token.Literal
 }
