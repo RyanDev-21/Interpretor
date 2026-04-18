@@ -55,6 +55,9 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefixParseFn(token.BANG, p.parsePrefixExpression)
 	p.registerPrefixParseFn(token.PLUS, p.parsePrefixExpression)
 	p.registerPrefixParseFn(token.MINUS, p.parsePrefixExpression)
+	p.registerPrefixParseFn(token.LPAREN, p.parseGroupedExpression)
+	p.registerPrefixParseFn(token.IF, p.parseConditionExpression)
+	p.registerPrefixParseFn(token.FUNCTION, p.parseFunctionLiteral)
 
 	p.registerInfixParseFn(token.SLASH, p.parseInfixExpression)
 	p.registerInfixParseFn(token.PLUS, p.parseInfixExpression)
@@ -128,6 +131,94 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 		p.nextToken()
 	}
 	return stmt
+}
+
+// fn(x,y){return x+y}
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+	fl := &ast.FunctionLiteral{Token: p.curToken}
+	if !p.nextPeek(token.LPAREN) {
+		return nil
+	}
+	p.nextToken()
+	fl.Params = p.parseParams()
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	fl.Body = p.parseBlockStatement()
+	return fl
+}
+
+// (x,y,z) || ()
+func (p *Parser) parseParams() []*ast.Identifier {
+	var params []*ast.Identifier
+	if p.nextPeek(token.RPAREN) {
+		p.nextToken()
+		return params
+	}
+	p.nextToken()
+	ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	params = append(params, ident)
+
+	for p.nextPeek(token.COMMA) {
+		p.nextToken()                                                         // here we reach the comma  token
+		p.nextToken()                                                         // here we reach the next token
+		ident = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal} // create the ident
+		params = append(params, ident)
+	}
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	return params
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+	p.nextToken()
+	exp := p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	return exp
+}
+
+func (p *Parser) parseConditionExpression() ast.Expression {
+	exp := &ast.IfExpression{Token: p.curToken}
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+	p.nextToken()
+	exp.Condition = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	exp.Consequence = p.parseBlockStatement()
+	if p.nextPeek(token.ELSE) {
+		p.nextToken()
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+		exp.Alternative = p.parseBlockStatement()
+	}
+	return exp
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{Token: p.curToken}
+	block.Statements = []ast.Statement{}
+
+	p.nextToken()
+	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		stmt := p.parseStatements()
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		}
+		p.nextToken()
+
+	}
+	return block
 }
 
 func (p *Parser) parseIntLiteral() ast.Expression {
