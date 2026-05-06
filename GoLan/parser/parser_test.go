@@ -180,6 +180,10 @@ func TestParsingInfixExpressions(t *testing.T) {
 		operator   string
 		rightValue interface{}
 	}{
+		{"5.5 + 2.5;", 5.5, "+", 2.5},
+		{"5.5 - 2.5;", 5.5, "-", 2.5},
+		{"5.5 * 2.5;", 5.5, "*", 2.5},
+		{"5.5 / 2.5;", 5.5, "/", 2.5},
 		{"5 + 5;", 5, "+", 5},
 		{"5 - 5;", 5, "-", 5},
 		{"5 * 5;", 5, "*", 5},
@@ -474,6 +478,24 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 	return true
 }
 
+func testFloatLiteral(t *testing.T, il ast.Expression, value float32) bool {
+	float, ok := il.(*ast.FloatLiteral)
+	if !ok {
+		t.Errorf("il not *ast.IntegerLiteral. got=%T", il)
+		return false
+	}
+	if float.Value != value {
+		t.Errorf("integ.Value not %v. got=%v", value, float.Value)
+		return false
+	}
+	if float.TokenLiteral() != fmt.Sprintf("%v", value) {
+		t.Errorf("integ.TokenLiteral not %v. got=%s", value,
+			float.TokenLiteral())
+		return false
+	}
+	return true
+}
+
 func checkParserErrors(t *testing.T, p *Parser) {
 	errors := p.Errors()
 	if len(errors) == 0 {
@@ -514,6 +536,10 @@ func testLiteralExpression(
 		return testIntegerLiteral(t, exp, int64(v))
 	case int64:
 		return testIntegerLiteral(t, exp, v)
+	case float32:
+		return testFloatLiteral(t, exp, v)
+	case float64:
+		return testFloatLiteral(t, exp, float32(v))
 	case string:
 		return testIdentifier(t, exp, v)
 	case bool:
@@ -569,6 +595,28 @@ func testBooleanLiteral(t *testing.T, exp ast.Expression, value bool) bool {
 		return false
 	}
 	return true
+}
+
+func TestFloatExpression(t *testing.T) {
+	input := "5.5;"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program statements not match %d", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statement is not *ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+
+	if !testFloatLiteral(t, stmt.Expression, float32(5.5)) {
+		return
+	}
 }
 
 func testInfixExpression(t *testing.T, exp ast.Expression, left interface{},

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/RyanDev-21/evaluator"
 	"github.com/RyanDev-21/lexer"
-	"github.com/RyanDev-21/token"
+	"github.com/RyanDev-21/parser"
+	// "github.com/RyanDev-21/token"
 )
 
 const PROMPT = ">>"
@@ -19,10 +21,25 @@ func Start(in io.Reader, out io.Writer) {
 		if !scanned {
 			return
 		}
-		l := lexer.New(scanner.Text())
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Printf("%+v\n", tok)
+		line := scanner.Text()
+		l := lexer.New(line)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		if len(p.Errors()) != 0 {
+			printParseErrors(out, p.Errors())
+			continue
 		}
+		evaluated := evaluator.Eval(program)
+		if evaluated != nil {
+			io.WriteString(out, evaluated.Inspect())
+			io.WriteString(out, "\n")
+		}
+	}
+}
 
+func printParseErrors(out io.Writer, errors []string) {
+	for _, msg := range errors {
+		io.WriteString(out, "parser errors:\n")
+		io.WriteString(out, "\t"+msg+"\n")
 	}
 }
