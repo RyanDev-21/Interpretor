@@ -81,7 +81,7 @@ let result = add(five, ten);
             { type: TokenType.INT, literal: "5" },
             { type: TokenType.LT, literal: "<" },
             { type: TokenType.INT, literal: "10" },
-            { type: TokenType.RT, literal: ">" },
+            { type: TokenType.GT, literal: ">" },
             { type: TokenType.INT, literal: "5" },
             { type: TokenType.SEMICOLON, literal: ";" },
             { type: TokenType.EOF, literal: "" },
