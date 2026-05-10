@@ -7,11 +7,12 @@ import (
 type ObjectType string
 
 const (
-	ObjInt   = "INTEGER"
-	ObjFloat = "FLOAT"
-	ObjBool  = "BOOLEAN"
-	ObjNULL  = "NULL"
-	ObjNum   = "NUMBER"
+	ObjInt         = "INTEGER"
+	ObjFloat       = "FLOAT"
+	ObjBool        = "BOOLEAN"
+	ObjNULL        = "NULL"
+	ObjNum         = "NUMBER"
+	ObjReturnValue = "RETURN"
 )
 
 type Object interface {
@@ -21,6 +22,13 @@ type Object interface {
 type Number interface {
 	NumberType() ObjectType
 }
+
+type ReturnValue struct {
+	Value Object
+}
+
+func (rv *ReturnValue) Inspect() string  { return fmt.Sprint("%v", rv.Value) }
+func (rv *ReturnValue) Type() ObjectType { return ObjReturnValue }
 
 type Integer struct {
 	Value int64

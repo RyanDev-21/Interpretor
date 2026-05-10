@@ -33,6 +33,13 @@ func Eval(node ast.Node) object.Object {
 		left := Eval(node.Left)
 		right := Eval(node.Right)
 		return evalInfixExpression(node.Operator, left, right)
+	case *ast.BlockStatement:
+		return evalStatements(node.Statements)
+	case *ast.IfExpression:
+		return evalIfStatement(node)
+	case *ast.ReturnStatement:
+		value := Eval(node.ReturnValue)
+		return &object.ReturnValue{Value: value}
 	}
 	return nil
 }
@@ -41,8 +48,35 @@ func evalStatements(statements []ast.Statement) object.Object {
 	var result object.Object
 	for _, statement := range statements {
 		result = Eval(statement)
+		if returnValue, ok := result.(*object.ReturnValue); ok {
+			return returnValue.Value
+		}
 	}
 	return result
+}
+
+func evalIfStatement(ie *ast.IfExpression) object.Object {
+	condition := Eval(ie.Condition)
+	if isTruthy(condition) {
+		return Eval(ie.Consequence)
+	} else if ie.Alternative != nil {
+		return Eval(ie.Alternative)
+	} else {
+		return NULL
+	}
+}
+
+func isTruthy(object object.Object) bool {
+	switch object {
+	case NULL:
+		return false
+	case TRUE:
+		return true
+	case FALSE:
+		return false
+	default:
+		return true
+	}
 }
 
 func nativeBoolObj(input bool) *object.Boolean {
@@ -160,7 +194,6 @@ func evalMinuxExpressoin(right object.Object) object.Object {
 	if right.Type() == object.ObjNULL {
 		return NULL
 	}
-
 	switch objType := right.(object.Number); objType.NumberType() {
 	case object.ObjInt:
 		value := right.(*object.Integer).Value
