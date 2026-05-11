@@ -7,6 +7,7 @@ import (
 
 	"github.com/RyanDev-21/evaluator"
 	"github.com/RyanDev-21/lexer"
+	"github.com/RyanDev-21/object"
 	"github.com/RyanDev-21/parser"
 	// "github.com/RyanDev-21/token"
 	// "github.com/RyanDev-21/token"
@@ -25,12 +26,13 @@ func Start(in io.Reader, out io.Writer) {
 		line := scanner.Text()
 		l := lexer.New(line)
 		p := parser.New(l)
+		env := object.NewEnvironment()
 		program := p.ParseProgram()
 		if len(p.Errors()) != 0 {
 			printParseErrors(out, p.Errors())
 			continue
 		}
-		evaluated := evaluator.Eval(program)
+		evaluated := evaluator.Eval(program, env)
 		if evaluated != nil {
 			io.WriteString(out, evaluated.Inspect())
 			io.WriteString(out, "\n")

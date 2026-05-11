@@ -13,6 +13,7 @@ const (
 	ObjNULL        = "NULL"
 	ObjNum         = "NUMBER"
 	ObjReturnValue = "RETURN"
+	ObjError       = "ERROR"
 )
 
 type Object interface {
@@ -23,11 +24,18 @@ type Number interface {
 	NumberType() ObjectType
 }
 
+type Error struct {
+	Message string
+}
+
+func (e *Error) Inspect() string  { return fmt.Sprint("Error: " + e.Message) }
+func (e *Error) Type() ObjectType { return ObjError }
+
 type ReturnValue struct {
 	Value Object
 }
 
-func (rv *ReturnValue) Inspect() string  { return fmt.Sprint("%v", rv.Value) }
+func (rv *ReturnValue) Inspect() string  { return fmt.Sprintf("%v", rv.Value) }
 func (rv *ReturnValue) Type() ObjectType { return ObjReturnValue }
 
 type Integer struct {
@@ -57,3 +65,24 @@ type NULLobj struct{}
 
 func (n *NULLobj) Inspect() string  { return "null" }
 func (n *NULLobj) Type() ObjectType { return ObjNULL }
+
+func NewEnvironment() *Environment {
+	s := make(map[string]Object)
+	return &Environment{
+		store: s,
+	}
+}
+
+type Environment struct {
+	store map[string]Object
+}
+
+func (e *Environment) Get(name string) (Object, bool) {
+	v, ok := e.store[name]
+	return v, ok
+}
+
+func (e *Environment) Set(name string, val Object) Object {
+	e.store[name] = val
+	return val
+}

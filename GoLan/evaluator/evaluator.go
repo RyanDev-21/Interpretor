@@ -1,6 +1,8 @@
 package evaluator
 
 import (
+	"fmt"
+
 	"github.com/RyanDev-21/ast"
 	"github.com/RyanDev-21/object"
 )
@@ -13,65 +15,106 @@ var (
 
 const PENDAS = "+-*/"
 
-func Eval(node ast.Node) object.Object {
+func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
-		return evalProgram(node.Statements)
+		return evalProgram(node.Statements, env)
 	case *ast.ExpressionStatement:
-		return Eval(node.Expression)
+		return Eval(node.Expression, env)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 	case *ast.FloatLiteral:
 		return &object.Float{Value: node.Value}
 	case *ast.Boolean:
 		return nativeBoolObj(node.Value)
+	case *ast.Identifier:
+		return evalIdentifier(node, env)
+	case *ast.LetStatement:
+		val := Eval(node.Value, env)
+		if isError(val) {
+			return val
+		}
+		env.Set(node.Name.Value, val)
 	case *ast.PrefixExpression: //!!false
 		// fist iteration will be right = ! ,operator = !
-		right := Eval(node.Right)
+		right := Eval(node.Right, env)
+		if isError(right) {
+			return right
+		}
 		return evalPrefixExpression(node.Operator, right)
 	case *ast.InfixExpression:
-		left := Eval(node.Left)
-		right := Eval(node.Right)
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+		right := Eval(node.Right, env)
+		if isError(right) {
+			return right
+		}
 		return evalInfixExpression(node.Operator, left, right)
 	case *ast.BlockStatement:
-		return evalBlockStatements(node.Statements)
+		return evalBlockStatements(node.Statements, env)
 	case *ast.IfExpression:
-		return evalIfStatement(node)
+		return evalIfStatement(node, env)
 	case *ast.ReturnStatement:
-		value := Eval(node.ReturnValue)
+		value := Eval(node.ReturnValue, env)
+		if isError(value) {
+			return value
+		}
 		return &object.ReturnValue{Value: value}
 	}
 	return nil
 }
 
-func evalProgram(statements []ast.Statement) object.Object {
-	var result object.Object
-	for _, statement := range statements {
-		result = Eval(statement)
-		if returnValue, ok := result.(*object.ReturnValue); ok {
-			return returnValue.Value
-		}
+func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
+	val, ok := env.Get(node.Value)
+	if !ok {
+		return newError("identifier not found: %s", node.Value)
 	}
-	return result
+	return val
 }
 
-func evalBlockStatements(statements []ast.Statement) object.Object {
+func evalProgram(statements []ast.Statement, env *object.Environment) object.Object {
 	var result object.Object
 	for _, statement := range statements {
-		result = Eval(statement)
-		if result != nil && result.Type() == object.ObjReturnValue {
+		result = Eval(statement, env)
+		switch result := result.(type) {
+		case *object.ReturnValue:
+			return result.Value
+		case *object.Error:
 			return result
 		}
 	}
 	return result
 }
 
-func evalIfStatement(ie *ast.IfExpression) object.Object {
-	condition := Eval(ie.Condition)
+func evalBlockStatements(statements []ast.Statement, env *object.Environment) object.Object {
+	var result object.Object
+	for _, statement := range statements {
+		result = Eval(statement, env)
+		if result != nil {
+			rt := result.Type()
+			if rt == object.ObjReturnValue || rt == object.ObjError {
+				return result
+			}
+		}
+	}
+	return result
+}
+
+func newError(format string, a ...interface{}) *object.Error {
+	return &object.Error{Message: fmt.Sprintf(format, a...)}
+}
+
+func evalIfStatement(ie *ast.IfExpression, env *object.Environment) object.Object {
+	condition := Eval(ie.Condition, env)
+	if isError(condition) {
+		return condition
+	}
 	if isTruthy(condition) {
-		return Eval(ie.Consequence)
+		return Eval(ie.Consequence, env)
 	} else if ie.Alternative != nil {
-		return Eval(ie.Alternative)
+		return Eval(ie.Alternative, env)
 	} else {
 		return NULL
 	}
@@ -104,12 +147,14 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 	case "-":
 		return evalMinuxExpressoin(right)
 	default:
-		return NULL
+		return newError("unknown operator: %s%s", operator, right.Type())
 	}
 }
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
 	switch {
+	case left.Type() != right.Type():
+		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	case left.Type() == object.ObjNum && right.Type() == object.ObjNum:
 		return evalNumberInfixExpression(
 			operator,
@@ -118,16 +163,25 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 		)
 	case operator == "==":
 		return nativeBoolObj(left == right)
-	case operator != "!=":
+	case operator == "!=":
 		return nativeBoolObj(left != right)
 	default:
-		return NULL
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 
 	}
 }
 
+func isError(obj object.Object) bool {
+	if obj != nil {
+		return obj.Type() == object.ObjError
+	}
+	return false
+}
+
 func evalNumberInfixExpression(operator string, left, right object.Number) object.Object {
 	switch {
+	case left.NumberType() != right.NumberType():
+		return newError("number type mismatch:%s %s", left.NumberType(), right.NumberType())
 	case left.NumberType() == object.ObjInt && right.NumberType() == object.ObjInt:
 		leftValue := left.(*object.Integer).Value
 		rightValue := right.(*object.Integer).Value
@@ -137,7 +191,7 @@ func evalNumberInfixExpression(operator string, left, right object.Number) objec
 		rightValue := right.(*object.Float).Value
 		return evalFloatValue(operator, leftValue, rightValue)
 	default:
-		return NULL
+		return newError("unknown type :%s %s", left.NumberType(), right.NumberType())
 	}
 }
 
@@ -160,7 +214,7 @@ func evalIntegerValue(operator string, leftValue, rightValue int64) object.Objec
 	case "<":
 		return nativeBoolObj(leftValue < rightValue)
 	default:
-		return NULL
+		return newError("unknown operator:%s", operator)
 	}
 }
 
@@ -183,7 +237,7 @@ func evalFloatValue(operator string, leftValue, rightValue float32) object.Objec
 	case "<":
 		return nativeBoolObj(leftValue < rightValue)
 	default:
-		return NULL
+		return newError("unknown operator:%s", operator)
 	}
 }
 
@@ -205,14 +259,15 @@ func evalMinuxExpressoin(right object.Object) object.Object {
 	if right.Type() == object.ObjNULL {
 		return NULL
 	}
-	switch objType := right.(object.Number); objType.NumberType() {
-	case object.ObjInt:
-		value := right.(*object.Integer).Value
-		return &object.Integer{Value: -value}
-	case object.ObjFloat:
-		value := right.(*object.Float).Value
-		return &object.Float{Value: -value}
-	default:
-		return NULL
+	if right.Type() == object.ObjNum {
+		switch objType := right.(object.Number); objType.NumberType() {
+		case object.ObjInt:
+			value := right.(*object.Integer).Value
+			return &object.Integer{Value: -value}
+		case object.ObjFloat:
+			value := right.(*object.Float).Value
+			return &object.Float{Value: -value}
+		}
 	}
+	return newError("unknown operator: -%s", right.Type())
 }
