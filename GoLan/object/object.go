@@ -1,7 +1,11 @@
 package object
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
+
+	"github.com/RyanDev-21/ast"
 )
 
 type ObjectType string
@@ -14,6 +18,7 @@ const (
 	ObjNum         = "NUMBER"
 	ObjReturnValue = "RETURN"
 	ObjError       = "ERROR"
+	ObjFunction    = "FUNCTOIN"
 )
 
 type Object interface {
@@ -85,4 +90,27 @@ func (e *Environment) Get(name string) (Object, bool) {
 func (e *Environment) Set(name string, val Object) Object {
 	e.store[name] = val
 	return val
+}
+
+type Function struct {
+	Params []*ast.Identifier
+	Body   *ast.BlockStatement
+	Env    *Environment
+}
+
+func (f *Function) Type() ObjectType { return ObjFunction }
+func (f *Function) Inspect() string {
+	var out bytes.Buffer
+	params := []string{}
+	for _, p := range f.Params {
+		params = append(params, p.Value)
+	}
+
+	out.WriteString("fn")
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ","))
+	out.WriteString("){\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("}\n")
+	return out.String()
 }

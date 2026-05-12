@@ -339,8 +339,13 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
 	stmt.ReturnValue = p.parseExpression(LOWEST)
-	for !p.curTokenIs(token.SEMICOLON) {
+	for !p.curTokenIs(token.SEMICOLON) && !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
 		p.nextToken()
+	}
+
+	if p.curTokenIs(token.RBRACE) || p.curTokenIs(token.EOF) {
+		p.errors = append(p.errors,
+			fmt.Sprintf("expected semicolon after return statement got %s instead", p.curToken.Type))
 	}
 
 	return stmt
@@ -357,9 +362,13 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	}
 	p.nextToken()
 	stmt.Value = p.parseExpression(LOWEST)
-	for !p.curTokenIs(token.SEMICOLON) {
+	for !p.curTokenIs(token.SEMICOLON) && !p.curTokenIs(token.EOF) {
 		p.nextToken()
 	}
+	if p.curTokenIs(token.EOF) {
+		p.errors = append(p.errors, fmt.Sprintf("expected semicolon after let statement got %s instead", p.curToken.Type))
+	}
+
 	return stmt
 }
 
