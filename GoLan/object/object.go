@@ -19,6 +19,8 @@ const (
 	ObjReturnValue = "RETURN"
 	ObjError       = "ERROR"
 	ObjFunction    = "FUNCTOIN"
+	ObjStr         = "STRING"
+	ObjBuiltIn     = "BUILTIN"
 )
 
 type Object interface {
@@ -75,15 +77,26 @@ func NewEnvironment() *Environment {
 	s := make(map[string]Object)
 	return &Environment{
 		store: s,
+		outer: nil,
 	}
+}
+
+func NewEnclosedEnvironment(outer *Environment) *Environment {
+	env := NewEnvironment()
+	env.outer = outer
+	return env
 }
 
 type Environment struct {
 	store map[string]Object
+	outer *Environment
 }
 
 func (e *Environment) Get(name string) (Object, bool) {
 	v, ok := e.store[name]
+	if !ok && e.outer != nil {
+		v, ok = e.outer.Get(name)
+	}
 	return v, ok
 }
 
@@ -113,4 +126,25 @@ func (f *Function) Inspect() string {
 	out.WriteString(f.Body.String())
 	out.WriteString("}\n")
 	return out.String()
+}
+
+type String struct {
+	Value string
+}
+
+func (s *String) Type() ObjectType { return ObjStr }
+func (s *String) Inspect() string {
+	return s.Value
+}
+
+type (
+	BuiltInFunction func(args ...Object) Object
+	BuiltIn         struct {
+		Fn BuiltInFunction
+	}
+)
+
+func (b *BuiltIn) Type() ObjectType { return ObjBuiltIn }
+func (b *BuiltIn) Inspect() string {
+	return "builtIn function"
 }

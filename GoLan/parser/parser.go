@@ -49,6 +49,7 @@ func New(l *lexer.Lexer) *Parser {
 	p := &Parser{l: l, errors: []string{}}
 	p.prefixParseFn = make(map[token.TokenType]prefixParseFn)
 	p.infixParseFn = make(map[token.TokenType]infixParseFn)
+	p.registerPrefixParseFn(token.STRING, p.parseStringLiteral)
 	p.registerPrefixParseFn(token.IDENT, p.parseIdentifier)
 	p.registerPrefixParseFn(token.INT, p.parseIntLiteral)
 	p.registerPrefixParseFn(token.FLOAT, p.parserFloatLiteral)
@@ -150,6 +151,10 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 	}
 	fl.Body = p.parseBlockStatement()
 	return fl
+}
+
+func (p *Parser) parseStringLiteral() ast.Expression {
+	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
 }
 
 // (x,y,z) || ()

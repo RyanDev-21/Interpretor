@@ -26,7 +26,7 @@ func TestNextToken(t *testing.T) {
 
 		l := New(input)
 		for i, tt := range tests {
-			tok := l.nextToken()
+			tok := l.NextToken()
 			if tok.Type != tt.expectedType {
 				t.Fatalf("tests[%d]-tokentype wrong.expected=%q got %q", i, tt.expectedType, tok.Type)
 			}
@@ -66,7 +66,7 @@ func TestNextToken(t *testing.T) {
 		}
 		l := New(input)
 		for i, tt := range tests {
-			tok := l.nextToken()
+			tok := l.NextToken()
 			if tok.Type != tt.expectedType {
 				t.Fatalf("tests[%d]-tokentype wrong.expected=%q got %q", i, tt.expectedType, tok.Type)
 			}
@@ -93,7 +93,8 @@ func TestNextToken(t *testing.T) {
 			10 == 10;
 			10 !=9;
 			let ill = 5.5.5;
-		
+			"foobar"
+			"foo bar"
 		`
 
 		tests := []struct {
@@ -178,11 +179,13 @@ func TestNextToken(t *testing.T) {
 			{token.ASSIGN, "="},
 			{token.ILLEGAL, "5.5.5"},
 			{token.SEMICOLON, ";"},
+			{token.STRING, "foobar"},
+			{token.STRING, "foo bar"},
 			{token.EOF, ""},
 		}
 		l := New(input)
 		for i, tt := range tests {
-			tok := l.nextToken()
+			tok := l.NextToken()
 			if tok.Type != tt.expectedType {
 				t.Fatalf("tests[%d]-tokentype wrong.expected=%q got %q", i, tt.expectedType, tok.Type)
 			}
