@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/RyanDev-21/ast"
 	"github.com/RyanDev-21/object"
@@ -26,6 +27,24 @@ var builtins = map[string]*object.BuiltIn{
 				return &object.Integer{Value: int64(len(arg.Value))}
 			default:
 				return newError("argument to `len` not supported, got %s", arg.Type())
+			}
+		},
+	},
+	"includes": {
+		Fn: func(args ...object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("wrong number of arguments.got=%d, want=2", len(args))
+			}
+			switch arg := args[0].(type) {
+			case *object.String:
+				if args[1].Type() == object.ObjStr {
+					arg2 := args[1].(*object.String)
+					return &object.Boolean{Value: strings.Contains(arg.Value, arg2.Value)}
+				} else {
+					return newError("wrong type for second arguments ,got=%v ,want=STRING", args[1].Type())
+				}
+			default:
+				return newError("wrong type for first arguments, got=%v,want=STRING", arg.Type())
 			}
 		},
 	},

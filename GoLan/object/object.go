@@ -21,6 +21,7 @@ const (
 	ObjFunction    = "FUNCTOIN"
 	ObjStr         = "STRING"
 	ObjBuiltIn     = "BUILTIN"
+	ObjArray       = "ARRAY"
 )
 
 type Object interface {
@@ -137,6 +138,15 @@ func (s *String) Inspect() string {
 	return s.Value
 }
 
+//	type Array struct {
+//		Value []any
+//	}
+//
+// func (a *Array)Type()ObjectType{return ObjArray}
+//
+//	func (a *Array)Inspect()string{
+//		var out
+//	}
 type (
 	BuiltInFunction func(args ...Object) Object
 	BuiltIn         struct {
